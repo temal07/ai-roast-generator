@@ -20,15 +20,6 @@ export default function Home() {
           {
             (response) && (
               <div className="flex flex-col gap-5 px-4 py-4">
-                <div className="">
-                  <Image 
-                    src={response.image}
-                    alt="image"
-                    width={200}
-                    height={200}
-                    className=""
-                  />
-                </div>
                 <div className='mb-20 max-w-max flex mr-40 ml-20'>
                     <div>
                         <Image
@@ -37,8 +28,16 @@ export default function Home() {
                             className='w-10 h-10 mr-4 rounded-full'
                         />
                     </div>
-                    <div className='text-sm font-poppins text-gray-900 bg-gray-300 p-4 rounded-lg'>
-                        File uploaded: {response.name} ({(response.size / 1024).toFixed(2)} KB)
+                    <div className="flex flex-col gap-5">
+                      <div className="bg-gray-100 p-4 rounded-lg">
+                        <strong>Roast for Image A:</strong> {response.roastA}
+                      </div>
+                      <div className="bg-gray-100 p-4 rounded-lg">
+                        <strong>Roast for Image B:</strong> {response.roastB}
+                      </div>
+                      <div className="mt-2 font-semibold">
+                        Winner: {response.winner} — {response.reason}
+                      </div>
                     </div>
                 </div>
               </div>

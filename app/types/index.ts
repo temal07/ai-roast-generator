@@ -1,12 +1,11 @@
 // Defines all the types for a better structured Nextjs app
 
 export type Response = {
-    name: string; 
-    size: number; 
-    type: string; 
-    image: string,
-    lastModified: number;
-}
+    roastA: string;
+    roastB: string;
+    winner: "imageA" | "imageB";
+    reason: string;
+};
 
 export type ErrorMessageProps = {
     message: string | null;

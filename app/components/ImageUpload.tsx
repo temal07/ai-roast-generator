@@ -8,26 +8,32 @@ import { useFileUpload } from "../hooks/useFileUpload";
 
 export default function ImageUpload({ onResponse }: ImageUploadProps) {
   // with the values returned from useFileUplaod.ts, destructure them and you'll 
-  // be able to use them here as well
+  // be able to use them here as well (this is basically how you create a custom hook in React)
 
-  const { handleOnChange, handleSubmit, isLoading, selectedFile, errorMessage, isFading } = useFileUpload({ onResponse });
+  const { handleOnChangeA, handleOnChangeB, handleSubmit, isLoading, selectedFileA, selectedFileB, errorMessage } = useFileUpload({ onResponse });
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <label className="flex flex-col items-center justify-center w-full max-w-xs px-4 py-2 bg-white text-blue-600 rounded-lg shadow-md tracking-wide uppercase border border-blue-500 cursor-pointer hover:bg-blue-50 transition duration-150">
-        <svg className="w-6 h-6 mb-1 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-6 5 6M12 4.5V14" />
-        </svg>
-        <span className="text-base leading-normal">{selectedFile ? selectedFile.name : "Choose a file"}</span>
-        <input 
-          type="file" 
-          name="file" 
-          className="hidden" 
-          onChange={handleOnChange}
-        />
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-md mx-auto">
+      <label className="flex flex-col items-center justify-center px-4 py-2 bg-white text-blue-600 rounded-lg shadow-md cursor-pointer hover:bg-blue-50">
+        <span>{selectedFileA ? selectedFileA.name : "Choose first image"}</span>
+        <input type="file" accept="image/*" className="hidden" onChange={handleOnChangeA} />
       </label>
-      <button type="submit" className="bg-blue-500 text-white rounded-md p-2 max-w-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || !selectedFile}>{isLoading ? "Generating..." : "Generate Roast"}</button>
-      <ErrorMessage message={errorMessage} isFading={isFading} />
+      
+      <label className="flex flex-col items-center justify-center px-4 py-2 bg-white text-blue-600 rounded-lg shadow-md cursor-pointer hover:bg-blue-50">
+        <span>{selectedFileB ? selectedFileB.name : "Choose second image"}</span>
+        <input type="file" accept="image/*" className="hidden" onChange={handleOnChangeB} />
+      </label>
+
+      {/* Submit Button */}
+      <button
+        type="submit"
+        className="bg-blue-500 text-white rounded-md p-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={isLoading || !selectedFileA || !selectedFileB}
+      >
+        {isLoading ? "Generating..." : "Generate Roast"}
+      </button>
+
+      {errorMessage && <ErrorMessage message={errorMessage} isFading={false} />}
     </form>
   );
 }
