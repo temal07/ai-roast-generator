@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useState } from "react";
 import ImageUpload from "./components/ImageUpload";
 import { prettifyText } from "./utils/utils";
+import Instructions from "./components/Instructions";
+import Footer from "./components/Footer";
 
 
 export default function Home() {
@@ -14,8 +16,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col justify-center mt-5 gap-5 px-4 py-4">
+      <Instructions />
       <ImageUpload onResponse={setResponse} />
-
       <div className="flex flex-col">
           {
             (response) && (
@@ -37,6 +39,7 @@ export default function Home() {
             )
           }
       </div>
+      <Footer />
     </div>
   );
 }

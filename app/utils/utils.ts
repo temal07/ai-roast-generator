@@ -1,4 +1,9 @@
 import { GenerativeModel } from "@google/generative-ai";
+import crypto from "crypto";
+
+export function hashImageData(base64 : string) {
+  return crypto.createHash("sha256").update(base64).digest("hex");
+}
 
 // Helper function to convert file data to URL
 export async function fileDataToURL(file : File) : Promise<string> {
@@ -22,24 +27,25 @@ export function prettifyText(text: string): string {
 
 // Retry logic with 429 errors
 export async function callGeminiWithRetry(
-    model: GenerativeModel,
-    prompt: string,
-    images: any[],
-    maxRetries = 3
-  ) {
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        const result = await model.generateContent([prompt, ...images]);
-        return result.response.text();
-      } catch (error: any) {
-        if (error.message?.includes("429") && i < maxRetries - 1) {
-          // Exponential backoff: 1s, 2s, 4s
-          const waitTime = Math.pow(2, i) * 1000;
-          console.log(`Rate limited. Retrying in ${waitTime}ms...`);
-          await new Promise((resolve) => setTimeout(resolve, waitTime));
-          continue;
-        }
-        throw error;
+  model: GenerativeModel,
+  prompt: string,
+  images: any[],
+  maxRetries = 3
+): Promise<string> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const result = await model.generateContent([prompt, ...images]);
+      return result.response.text();
+    } catch (error: any) {
+      if (error.message?.includes("429") && i < maxRetries - 1) {
+        const waitTime = Math.pow(2, i) * 1000;
+        console.log(`Rate limited. Retrying in ${waitTime}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        continue;
       }
+      throw error;
     }
   }
+
+  throw new Error("Gemini retry failed: no response received");
+}
