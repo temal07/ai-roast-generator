@@ -9,7 +9,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 // Hybrid + time-based caching
 type RoastCacheItem = { text: string; timestamp: number };
 const roastCache = new Map<string, RoastCacheItem>();
-const CACHE_MAX_AGE = 1000 * 60 * 5; // 5 minutes
+const CACHE_MAX_AGE = 1000 * 60 * 60; // 1 hour
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
