@@ -76,10 +76,7 @@ export function useFileUpload({ onResponse } : ImageUploadProps) {
       }
 
       const data = await res.json();
-      console.log(data);
-
       const pretty = prettifyText(data.text); // pass the actual text
-      console.log("API response:", pretty);
       onResponse(pretty);
     } catch (error) {
       console.error("Error generating response:", error);

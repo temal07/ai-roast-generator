@@ -12,8 +12,6 @@ import Footer from "./components/Footer";
 export default function Home() {
   const [response, setResponse] = useState<string | null>(null);
 
-  console.log(response);
-
   return (
     <div className="flex flex-col justify-center mt-5 gap-5 px-4 py-4">
       <Instructions />
