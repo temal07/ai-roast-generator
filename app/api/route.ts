@@ -1,21 +1,17 @@
-// app/api/roast/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
-import { GenerativeModel, GoogleGenerativeAI } from "@google/generative-ai";
-import { callGeminiWithRetry, fileDataToURL, hashImageData } from "../utils/utils";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { fileDataToURL, callGeminiWithRetry, hashImageData } from "../utils/utils";
 import crypto from "crypto";
-import PQueue from "p-queue";
 
-// Initialize Gemini
+// Initialise Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// 1-hour deterministic cache
+// Cache + in-flight locking
 type RoastCacheItem = { text: string; timestamp: number };
 const roastCache = new Map<string, RoastCacheItem>();
-const CACHE_MAX_AGE = 1000 * 60 * 60; // 1 hour
+const inFlight = new Map<string, Promise<string>>();
 
-// Queue to serialize API calls
-const queue = new PQueue({ concurrency: 1 });
+const CACHE_MAX_AGE = 1000 * 60 * 60; // 1 hour
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +19,11 @@ export async function POST(request: NextRequest) {
     const imageA = formData.get("imageA");
     const imageB = formData.get("imageB");
 
-    if ((!imageA || !(imageA instanceof File)) || (!imageB || !(imageB instanceof File))) {
-      return NextResponse.json({ error: "Both images are required" }, { status: 400 });
+    if (!(imageA instanceof File) || !(imageB instanceof File)) {
+      return NextResponse.json(
+        { error: "Both images are required" },
+        { status: 400 }
+      );
     }
 
     const imageADataURL = await fileDataToURL(imageA);
@@ -32,63 +31,102 @@ export async function POST(request: NextRequest) {
 
     const hashA = hashImageData(imageADataURL.split(",")[1]);
     const hashB = hashImageData(imageBDataURL.split(",")[1]);
-    const cacheKey = crypto.createHash("sha256").update([hashA, hashB].sort().join("-")).digest("hex");
 
-    // Always use cached response if available
+    const cacheKey = crypto
+      .createHash("sha256")
+      .update([hashA, hashB].sort().join("-"))
+      .digest("hex");
+
     const now = Date.now();
-    const cachedItem = roastCache.get(cacheKey);
-    if (cachedItem && now - cachedItem.timestamp < CACHE_MAX_AGE) {
-      return NextResponse.json({ text: cachedItem.text });
+
+    // ✅ HARD CACHE HIT
+    const cached = roastCache.get(cacheKey);
+    if (cached && now - cached.timestamp < CACHE_MAX_AGE) {
+      return NextResponse.json({ text: cached.text });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // ✅ IN-FLIGHT DEDUPLICATION
+    if (inFlight.has(cacheKey)) {
+      const text = await inFlight.get(cacheKey)!;
+      return NextResponse.json({ text });
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+    });
 
     const prompt = `
-      You are a comedian. You will receive two images below.
-      Your task is to roast BOTH images in a playful, non-derogatory way.
+You are a comedian. You will receive two images below.
+Your task is to roast BOTH images in a playful, non-derogatory way.
 
-      Rules:
-      - Check if the images are of a person/people. If not, STOP and remind user to upload a person.
-      - Describe the images
-      - Use sarcasm
-      - Use real-world analogies
-      - Use jokes sparingly
-      - Casual slang is allowed
+Rules:
+- Check if the images are of a person/people. If not, STOP and remind user to upload a person.
+- Describe the images
+- Use sarcasm
+- Use real-world analogies
+- Use jokes sparingly
+- Casual slang is allowed
 
-      Return in this exact order:
-      1. Image A Roast (IN BOLD)
-      2. Image B Roast (IN BOLD)
-      3. Winner: imageA or imageB (IN BOLD)
-      4. Reasoning for your choice (IN BOLD)
-    `;
+Return in this exact order:
+1. Image A Roast (IN BOLD)
+2. Image B Roast (IN BOLD)
+3. Winner: imageA or imageB (IN BOLD)
+4. Reasoning for your choice (IN BOLD)
+`;
 
-    const getMimeType = (dataURL: string) =>
-      dataURL.match(/^data:([^;]+);base64/)?.[1] || "application/octet-stream";
+    const imageAParts = imageADataURL.split(",");
+    const imageBParts = imageBDataURL.split(",");
 
     const imageParts = [
-      { inlineData: { mimeType: getMimeType(imageADataURL), data: imageADataURL.split(",")[1] } },
-      { inlineData: { mimeType: getMimeType(imageBDataURL), data: imageBDataURL.split(",")[1] } },
+      {
+        inlineData: {
+          mimeType:
+            imageAParts[0].match(/^data:([^;]+);base64$/)?.[1] ??
+            "application/octet-stream",
+          data: imageAParts[1],
+        },
+      },
+      {
+        inlineData: {
+          mimeType:
+            imageBParts[0].match(/^data:([^;]+);base64$/)?.[1] ??
+            "application/octet-stream",
+          data: imageBParts[1],
+        },
+      },
     ];
 
-    // Queue API call to prevent hitting rate limits
-    const text = await queue.add(() => callGeminiWithRetry(model, prompt, imageParts));
+    // 🔒 SINGLE AUTHORITATIVE PROMISE
+    const promise = (async () => {
+      console.log("Calling Gemini for cacheKey:", cacheKey);
+      const text = await callGeminiWithRetry(model, prompt, imageParts);
+      roastCache.set(cacheKey, { text, timestamp: Date.now() });
+      return text;
+    })();
 
-    // Store result in cache
-    roastCache.set(cacheKey, { text, timestamp: now });
+    inFlight.set(cacheKey, promise);
 
-    return NextResponse.json({ text });
+    try {
+      const text = await promise;
+      return NextResponse.json({ text });
+    } finally {
+      inFlight.delete(cacheKey);
+    }
   } catch (error: any) {
-    console.error("Gemini API error:", error);
+    console.error("Route error:", error);
 
-    if (error.message?.includes("429")) {
+    if (error?.message?.includes("429")) {
       return NextResponse.json(
-        { error: "Rate limit exceeded. Please try again shortly.", retryAfter: 5 },
+        {
+          error: "Rate limit exceeded. Please try again shortly.",
+          retryAfter: 5,
+        },
         { status: 429 }
       );
     }
 
     return NextResponse.json(
-      { error: "Failed to generate roast", details: error.message },
+      { error: "Failed to generate roast" },
       { status: 500 }
     );
   }
