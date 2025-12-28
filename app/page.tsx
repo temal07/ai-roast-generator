@@ -19,19 +19,20 @@ export default function Home() {
       <div className="flex flex-col">
           {
             (response) && (
-              <div className="flex flex-col gap-5 px-4 py-4">
-                <div className='mb-20 max-w-max flex mr-40 ml-20'>
-                    <div>
-                        <Image
-                            src={geminiIcon}
-                            alt="gemini"
-                            className='w-40 h-10 mr-4 rounded-full'
-                        />
-                    </div>
-                    <div
-                      className="text-sm font-poppins text-gray-900 bg-gray-300 p-4 rounded-lg"
-                      dangerouslySetInnerHTML={{ __html: response }}
+              <div className="flex flex-col gap-5 px-2 py-4 sm:px-4">
+                <div className="flex flex-col sm:flex-row items-start mb-10 sm:mb-20 max-w-full sm:max-w-2xl mx-auto">
+                  <div className="shrink-0 mb-4 sm:mb-0 sm:mr-4 flex items-center">
+                    <Image
+                      src={geminiIcon}
+                      alt="gemini"
+                      className="w-12 h-12 sm:w-12 sm:h-12 md:w-12 md:h-12 rounded-full"
+                      priority
                     />
+                  </div>
+                  <div
+                    className="text-sm font-poppins text-gray-900 bg-gray-300 p-3 sm:p-4 rounded-lg w-full break-words"
+                    dangerouslySetInnerHTML={{ __html: response }}
+                  />
                 </div>
               </div>
             )
