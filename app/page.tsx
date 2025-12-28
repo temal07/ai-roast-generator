@@ -3,12 +3,12 @@
 import geminiIcon from "@/public/gemini-icon.webp";
 import Image from "next/image";
 import { useState } from "react";
-import type { Response } from "./types";
 import ImageUpload from "./components/ImageUpload";
+import { prettifyText } from "./utils/utils";
 
 
 export default function Home() {
-  const [response, setResponse] = useState<Response | null>(null);
+  const [response, setResponse] = useState<string | null>(null);
 
   console.log(response);
 
@@ -25,20 +25,13 @@ export default function Home() {
                         <Image
                             src={geminiIcon}
                             alt="gemini"
-                            className='w-10 h-10 mr-4 rounded-full'
+                            className='w-40 h-10 mr-4 rounded-full'
                         />
                     </div>
-                    <div className="flex flex-col gap-5">
-                      <div className="bg-gray-100 p-4 rounded-lg">
-                        <strong>Roast for Image A:</strong> {response.roastA}
-                      </div>
-                      <div className="bg-gray-100 p-4 rounded-lg">
-                        <strong>Roast for Image B:</strong> {response.roastB}
-                      </div>
-                      <div className="mt-2 font-semibold">
-                        Winner: {response.winner} — {response.reason}
-                      </div>
-                    </div>
+                    <div
+                      className="text-sm font-poppins text-gray-900 bg-gray-300 p-4 rounded-lg"
+                      dangerouslySetInnerHTML={{ __html: response }}
+                    />
                 </div>
               </div>
             )

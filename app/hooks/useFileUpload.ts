@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useState } from "react";
-import type { ImageUploadProps, Response } from "../types";
+import type { ImageUploadProps } from "../types";
 import { useAutoDismiss } from "./useAutoDismiss";
+import { prettifyText } from "../utils/utils";
 
 export function useFileUpload({ onResponse } : ImageUploadProps) {
     const [isLoading, setIsLoading] = useState(false);
@@ -75,11 +76,14 @@ export function useFileUpload({ onResponse } : ImageUploadProps) {
       }
 
       const data = await res.json();
-      console.log("API response:", data);
-      onResponse(data);
+      console.log(data);
+
+      const pretty = prettifyText(data.text); // pass the actual text
+      console.log("API response:", pretty);
+      onResponse(pretty);
     } catch (error) {
-      console.error("Error uploading files:", error);
-      setErrorMessage("Upload failed. Please try again.");
+      console.error("Error generating response:", error);
+      setErrorMessage("Error Generating response, please try again.");
     } finally {
       setIsLoading(false);
     }
